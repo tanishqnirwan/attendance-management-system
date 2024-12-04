@@ -1,6 +1,7 @@
 import { Metadata } from "next"
 import { TeacherSidebar } from "@/components/teacher/sidebar"
-import { LogoutButton } from "@/components/logout-button"
+import { TopBar } from "@/components/teacher/top-bar"
+import { Toaster } from "sonner"
 
 export const metadata: Metadata = {
   title: "Teacher Portal - Attendance Management System",
@@ -14,13 +15,11 @@ export default function TeacherLayout({
 }) {
   return (
     <div className="h-screen">
-      <div className="h-16 border-b flex items-center justify-between px-4">
-        <h1 className="text-xl font-bold">GGSIPU Attendance System</h1>
-        <LogoutButton />
-      </div>
-      <div className="flex h-[calc(100vh-4rem)]">
+      <TopBar />
+      <div className="flex h-[calc(100vh-3.5rem)]">
         <TeacherSidebar />
         <main className="flex-1 overflow-y-auto p-6">
+          <Toaster />
           {children}
         </main>
       </div>

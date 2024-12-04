@@ -1,6 +1,7 @@
 import { Metadata } from "next"
 import { LogoutButton } from "@/components/logout-button"
 import { Sidebar } from "@/components/student/sidebar"
+import { TopBar } from "@/components/student/top-bar"
 import { Toaster } from "sonner"
 
 export const metadata: Metadata = {
@@ -16,10 +17,13 @@ export default function StudentLayout({
   return (
     <div className="flex h-screen">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-8">
-        <Toaster />
-        {children}
-      </main>
+      <div className="flex-1 flex flex-col">
+        <TopBar />
+        <main className="flex-1 overflow-y-auto p-8">
+          <Toaster />
+          {children}
+        </main>
+      </div>
     </div>
   )
 } 

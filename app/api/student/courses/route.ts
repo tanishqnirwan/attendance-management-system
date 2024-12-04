@@ -3,21 +3,17 @@ import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 
-// Add interfaces for type safety
-interface Student {
-  courseId: string | null
-}
-
 interface Course {
   id: string
   name: string
   code: string
-  semester: string
-  subjects: Array<{
+  semester: number
+  subjects: {
     id: string
     name: string
     code: string
-  }>
+  }[]
+  enrolled: boolean
 }
 
 export async function GET() {
@@ -29,14 +25,14 @@ export async function GET() {
       return new NextResponse('Unauthorized', { status: 401 })
     }
 
-    // Get student's current course (if any)
+    // Get student's current course if any
     const student = await prisma.student.findUnique({
       where: { id: session.user.id },
       select: { courseId: true }
-    }) as Student | null
+    })
 
     // Get all available courses with their subjects
-    const courses = await prisma.course.findMany({
+    const coursesData = await prisma.course.findMany({
       include: {
         subjects: {
           select: {
@@ -46,10 +42,10 @@ export async function GET() {
           }
         }
       }
-    }) as Course[]
+    })
 
     // Format courses with enrollment status
-    const formattedCourses = courses.map(course => ({
+    const courses: Course[] = coursesData.map(course => ({
       id: course.id,
       name: course.name,
       code: course.code,
@@ -58,10 +54,10 @@ export async function GET() {
       enrolled: course.id === student?.courseId
     }))
 
-    return NextResponse.json(formattedCourses)
+    return NextResponse.json(courses)
   } catch (error) {
     console.error('Error fetching courses:', error)
-    return new NextResponse(JSON.stringify({ error: 'Internal Server Error', details: error }), { 
+    return new NextResponse(JSON.stringify({ error: 'Internal Server Error' }), { 
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     })

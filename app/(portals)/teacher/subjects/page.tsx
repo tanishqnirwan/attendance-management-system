@@ -1,15 +1,22 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface Course {
   id: string
   name: string
   code: string
+  semester: number
 }
 
 interface Subject {
@@ -18,10 +25,11 @@ interface Subject {
   code: string
   course: Course
   enrolled: boolean
+  studentCount?: number
 }
 
-interface EnrollmentResponse {
-  enrolled: boolean
+interface GroupedSubjects {
+  [key: string]: Subject[]
 }
 
 export default function SubjectsPage() {
@@ -37,7 +45,7 @@ export default function SubjectsPage() {
     try {
       const response = await fetch('/api/teacher/subjects')
       const data = await response.json()
-      setSubjects(data as Subject[])
+      setSubjects(data)
     } catch (error) {
       console.error('Error loading subjects:', error)
       toast.error("Failed to load subjects")
@@ -57,20 +65,21 @@ export default function SubjectsPage() {
         body: JSON.stringify({ subjectId }),
       })
 
-      if (!response.ok) throw new Error('Failed to update enrollment')
+      const data = await response.json()
 
-      const { enrolled } = await response.json() as EnrollmentResponse
-      
-      // Update local state
-      setSubjects(prevSubjects => 
-        prevSubjects.map(subject => 
-          subject.id === subjectId 
-            ? { ...subject, enrolled } 
+      if (!response.ok) throw new Error(data.error)
+
+      setSubjects(prev =>
+        prev.map(subject =>
+          subject.id === subjectId
+            ? { ...subject, enrolled: data.enrolled }
             : subject
         )
       )
 
-      toast.success(enrolled ? "Successfully enrolled" : "Successfully unenrolled")
+      toast.success(
+        data.enrolled ? "Successfully enrolled" : "Successfully unenrolled"
+      )
     } catch (error) {
       console.error('Error updating enrollment:', error)
       toast.error("Failed to update enrollment")
@@ -79,9 +88,19 @@ export default function SubjectsPage() {
     }
   }
 
+  // Group subjects by course
+  const groupedSubjects = subjects.reduce((acc: GroupedSubjects, subject) => {
+    const key = subject.course.name
+    if (!acc[key]) {
+      acc[key] = []
+    }
+    acc[key].push(subject)
+    return acc
+  }, {})
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-[calc(100vh-10rem)]">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     )
@@ -92,46 +111,64 @@ export default function SubjectsPage() {
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Subjects</h2>
         <p className="text-muted-foreground">
-          Enroll in subjects you want to teach
+          View and manage your subject enrollments
         </p>
       </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {subjects.map((subject) => (
-          <Card key={subject.id}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                {subject.name}
-                <span className="text-sm font-normal text-muted-foreground">
-                  {subject.code}
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                {subject.course.name} ({subject.course.code})
-              </p>
-              <Button
-                className="w-full"
-                variant={subject.enrolled ? "destructive" : "default"}
-                onClick={() => handleEnrollment(subject.id)}
-                disabled={enrolling === subject.id}
+      <Tabs defaultValue={Object.keys(groupedSubjects)[0]} className="space-y-6">
+        <ScrollArea className="w-full">
+          <TabsList className="inline-flex w-full justify-start border-b rounded-none h-12 bg-transparent p-0">
+            {Object.keys(groupedSubjects).map((courseName) => (
+              <TabsTrigger
+                key={courseName}
+                value={courseName}
+                className="relative h-12 rounded-none border-b-2 border-b-transparent px-4 pb-3 pt-2 font-medium text-muted-foreground hover:text-foreground data-[state=active]:border-b-primary data-[state=active]:text-foreground"
               >
-                {enrolling === subject.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
-                {subject.enrolled ? "Unenroll" : "Enroll"}
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+                {courseName}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </ScrollArea>
 
-        {subjects.length === 0 && (
-          <div className="col-span-full text-center text-muted-foreground py-8">
-            No subjects available
-          </div>
-        )}
-      </div>
+        {Object.entries(groupedSubjects).map(([courseName, courseSubjects]) => (
+          <TabsContent key={courseName} value={courseName}>
+            <div className="space-y-4">
+              {courseSubjects.map((subject) => (
+                <div 
+                  key={subject.id} 
+                  className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium">{subject.name}</h3>
+                      <span className="text-sm text-muted-foreground">
+                        • Semester {subject.course.semester}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {subject.code}
+                    </p>
+                  </div>
+                  <Button
+                    variant={subject.enrolled ? "destructive" : "default"}
+                    onClick={() => handleEnrollment(subject.id)}
+                    disabled={enrolling === subject.id}
+                    size="sm"
+                  >
+                    {enrolling === subject.id ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {subject.enrolled ? 'Unenrolling...' : 'Enrolling...'}
+                      </>
+                    ) : (
+                      subject.enrolled ? 'Unenroll' : 'Enroll'
+                    )}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   )
 } 
