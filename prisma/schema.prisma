@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Teacher {
+  id          String    @id
+  name        String
+  email       String    @unique
+  subjects    TeacherSubject[]
+}
+
+model Course {
+  id          String    @id @default(cuid())
+  name        String    // e.g., "Artificial Intelligence and Data Science"
+  code        String    @unique // e.g., "AIDS"
+  semester    Int
+  subjects    Subject[]
+  students    Student[]
+}
+
+model Subject {
+  id          String    @id @default(cuid())
+  name        String
+  code        String
+  course      Course    @relation(fields: [courseId], references: [id])
+  courseId    String
+  teachers    TeacherSubject[]
+  attendance  Attendance[]
+}
+
+model TeacherSubject {
+  id          String    @id @default(cuid())
+  teacher     Teacher   @relation(fields: [teacherId], references: [id])
+  teacherId   String
+  subject     Subject   @relation(fields: [subjectId], references: [id])
+  subjectId   String
+
+  @@unique([teacherId, subjectId])
+}
+
+model Student {
+  id          String        @id @default(cuid())
+  name        String
+  email       String        @unique
+  enrollment  String        @unique
+  course      Course        @relation(fields: [courseId], references: [id])
+  courseId    String
+  attendance  Attendance[]
+}
+
+model Attendance {
+  id          String    @id @default(cuid())
+  date        DateTime
+  status      Boolean
+  student     Student   @relation(fields: [studentId], references: [id])
+  studentId   String
+  subject     Subject   @relation(fields: [subjectId], references: [id])
+  subjectId   String
+
+  @@unique([date, studentId, subjectId])
+}

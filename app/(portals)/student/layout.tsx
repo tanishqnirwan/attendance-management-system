@@ -1,0 +1,25 @@
+import { Metadata } from "next"
+import { LogoutButton } from "@/components/logout-button"
+import { Sidebar } from "@/components/student/sidebar"
+import { Toaster } from "sonner"
+
+export const metadata: Metadata = {
+  title: "Student Portal - Attendance Management System",
+  description: "Student portal for managing attendance",
+}
+
+export default function StudentLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex h-screen">
+      <Sidebar />
+      <main className="flex-1 overflow-y-auto p-8">
+        <Toaster />
+        {children}
+      </main>
+    </div>
+  )
+} 
